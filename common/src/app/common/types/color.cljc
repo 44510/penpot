@@ -78,11 +78,12 @@
 ;; FIXME: incomplete schema
 (sm/def! ::recent-color
   [:and
-   [:map {:title "RecentColot"}
+   [:map {:title "RecentColor"}
     [:opacity {:optional true} [:maybe ::sm/safe-number]]
     [:color {:optional true} [:maybe ::rgb-color]]
     [:gradient {:optional true} [:maybe ::gradient]]]
-   [::sm/contains-any {:strict true} [:color :gradient]]])
+   ;; TODO: complete schema
+   [::sm/contains-any {:strict true} [:color :gradient :image]]])
 
 (def color?
   (sm/pred-fn ::color))

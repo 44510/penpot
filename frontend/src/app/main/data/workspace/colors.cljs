@@ -105,6 +105,9 @@
           (contains? color :opacity)
           (assoc :fill-opacity (:opacity color))
 
+          (contains? color :image)
+          (assoc :fill-image (:image color))
+
           :always
           (d/without-nils))
 
@@ -223,7 +226,10 @@
                           (assoc :stroke-color-gradient (:gradient attrs))
 
                           (contains? attrs :opacity)
-                          (assoc :stroke-opacity (:opacity attrs)))
+                          (assoc :stroke-opacity (:opacity attrs))
+
+                          (contains? attrs :image)
+                          (assoc :stroke-image (:image attrs)))
 
             attrs (merge attrs color-attrs)]
 
@@ -457,6 +463,10 @@
   [data]
   (dissoc data :hex :alpha :r :g :b :h :s :v))
 
+(defn clear-image-components
+  [data]
+  (dissoc data :hex :alpha :r :g :b :h :s :v :color))
+
 (defn- create-gradient
   [type]
   {:start-x 0.5
@@ -467,8 +477,14 @@
 
 (defn get-color-from-colorpicker-state
   [{:keys [type current-color stops gradient] :as state}]
-  (if (= type :color)
+  (cond
+    (= type :color)
     (clear-color-components current-color)
+
+    (= type :image)
+    (clear-image-components current-color)
+
+    :else
     {:gradient (-> gradient
                    (assoc :type (case type
                                   :linear-gradient :linear
@@ -487,7 +503,7 @@
         (on-change color)))))
 
 (defn initialize-colorpicker
-  [on-change]
+  [on-change tab]
   (ptk/reify ::initialize-colorpicker
     ptk/WatchEvent
     (watch [_ _ stream]
@@ -502,7 +518,14 @@
               (rx/filter (ptk/type? ::update-colorpicker-color) stream)
               (rx/filter (ptk/type? ::activate-colorpicker-gradient) stream))
              (rx/map (constantly (colorpicker-onchange-runner on-change)))
-             (rx/take-until stoper))))))
+             (rx/take-until stoper))))
+
+    ptk/UpdateEvent
+    (update [_ state]
+      (update state :colorpicker
+        (fn [state]
+          (-> state
+              (assoc :type tab)))))))
 
 (defn finalize-colorpicker
   []
@@ -522,13 +545,8 @@
                   (let [current-color (:current-color state)]
                     (if (some? gradient)
                       (let [stop  (or (:editing-stop state) 0)
-                            stops (mapv split-color-components (:stops gradient))
-                            type  (case (:type gradient)
-                                    :linear :linear-gradient
-                                    :radial :radial-gradient
-                                    (:type state))]
+                            stops (mapv split-color-components (:stops gradient))]
                         (-> state
-                            (assoc :type type)
                             (assoc :current-color (nth stops stop))
                             (assoc :stops stops)
                             (assoc :gradient (-> gradient
@@ -537,7 +555,6 @@
                             (assoc :editing-stop stop)))
 
                       (-> state
-                          (assoc :type :color)
                           (cond-> (or (nil? current-color)
                                       (not= (:color data) (:color current-color))
                                       (not= (:opacity data) (:opacity current-color)))
@@ -564,7 +581,6 @@
                                                                    (merge data)
                                                                    (materialize-color-components))))
                     (-> state
-                        (assoc :type :color)
                         (dissoc :gradient :stops :editing-stop)))))))
     ptk/WatchEvent
     (watch [_ state _]
@@ -592,6 +608,18 @@
                          :editing-stop stop)
                   state))))))
 
+(defn activate-colorpicker-color
+  []
+  (ptk/reify ::activate-colorpicker-color
+    ptk/UpdateEvent
+    (update [_ state]
+      (update state :colorpicker
+        (fn [state]
+          (-> state
+              (assoc :type :color)
+              (dissoc :editing-stop :stops :gradient)
+              (d/dissoc-in [:current-color :image])))))))
+
 (defn activate-colorpicker-gradient
   [type]
   (ptk/reify ::activate-colorpicker-gradient
@@ -599,23 +627,30 @@
     (update [_ state]
       (update state :colorpicker
               (fn [state]
-                (if (= type (:type state))
-                  (do
-                    (-> state
-                        (assoc :type :color)
-                        (dissoc :editing-stop :stops :gradient)))
-                  (let [gradient (create-gradient type)
-                        color    (:current-color state)]
-                    (-> state
-                        (assoc :type type)
-                        (assoc :gradient gradient)
-                        (cond-> (not (:stops state))
-                          (assoc :editing-stop 0
-                                 :stops  [(assoc color :offset 0)
-                                          (-> color
-                                              (assoc :alpha 0)
-                                              (assoc :offset 1)
-                                              (materialize-color-components))]))))))))))
+                (let [gradient (create-gradient type)
+                      color    (:current-color state)]
+                  (-> state
+                      (assoc :type type)
+                      (assoc :gradient gradient)
+                      (cond-> (not (:stops state))
+                        (assoc :editing-stop 0
+                          :stops  [(assoc color :offset 0)
+                                   (-> color
+                                       (assoc :alpha 0)
+                                       (assoc :offset 1)
+                                       (materialize-color-components))])))))))))
+
+(defn activate-colorpicker-image
+  []
+  (ptk/reify ::activate-colorpicker-image
+    ptk/UpdateEvent
+    (update [_ state]
+      (update state :colorpicker
+        (fn [state]
+          (-> state
+              (assoc :type :image)
+              (dissoc :editing-stop :stops :gradient)
+              (d/dissoc-in [:current-color :color])))))))
 
 (defn select-color
   [position add-color]

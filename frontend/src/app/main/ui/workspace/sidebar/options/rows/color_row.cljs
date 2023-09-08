@@ -41,8 +41,8 @@
   (if (= v :multiple) nil v))
 
 (mf/defc color-row
-  [{:keys [index color disable-gradient disable-opacity on-change
-           on-reorder on-detach on-open on-close title on-remove
+  [{:keys [index color disable-gradient disable-opacity disable-image 
+           on-change on-reorder on-detach on-open on-close title on-remove
            disable-drag on-focus on-blur select-only select-on-focus]}]
   (let [new-css-system  (mf/use-ctx ctx/new-css-system)
         current-file-id (mf/use-ctx ctx/current-file-id)
@@ -121,7 +121,7 @@
 
         handle-click-color
         (mf/use-fn
-         (mf/deps disable-gradient disable-opacity on-change on-close on-open)
+         (mf/deps disable-gradient disable-opacity disable-image on-change on-close on-open)
          (fn [color event]
            (let [color (cond
                          multiple-colors?
@@ -140,6 +140,7 @@
                         :y y
                         :disable-gradient disable-gradient
                         :disable-opacity disable-opacity
+                        :disable-image disable-image
                         ;; on-change second parameter means if the source is the color-picker
                         :on-change #(on-change (merge uc/empty-color %) true)
                         :on-close (fn [value opacity id file-id]
@@ -182,6 +183,7 @@
                      :dnd-over-top (= (:over dprops) :top)
                      :dnd-over-bot (= (:over dprops) :bot))
              :ref dref}
+
        [:span {:class (stl/css :color-info)}
         [:span {:class (stl/css-case :color-name-wrapper true
                                      :library-name-wrapper library-color?
@@ -220,9 +222,15 @@
           ;; Rendering a plain color
           :else
           [:span {:class (stl/css :color-input-wrapper)}
-           [:> color-input* {:value (if multiple-colors?
+           [:> color-input* {:value (cond
+                                      (:image color)
+                                      (tr "todo.image")
+
+                                      multiple-colors?
                                       ""
+                                      :else
                                       (-> color :color uc/remove-hash))
+
                              :placeholder (tr "settings.multiple")
                              :className   (stl/css :color-input)
                              :on-focus on-focus
@@ -230,8 +238,9 @@
                              :on-change handle-value-change}]])]
 
         (when (and (not gradient-color?)
-                   (not multiple-colors?)
-                   (not library-color?))
+                   (not multiple-colors?) 
+                   (not library-color?)
+                   (not disable-opacity))
 
           [:div {:class (stl/css :opacity-element-wrapper)}
            [:span {:class (stl/css :icon-text)}
@@ -254,14 +263,6 @@
                    :on-click handle-select}
           i/move-refactor])]
 
-
-
-
-
-
-
-
-
       [:div.row-flex.color-data {:title title
                                  :class (dom/classnames
                                          :dnd-over-top (= (:over dprops) :top)
@@ -274,7 +275,7 @@
                             :on-click handle-click-color}]
 
        (cond
-           ;; Rendering a color with ID
+         ;; Rendering a color with ID
          library-color?
          [:*
           [:div.color-info
@@ -295,7 +296,27 @@
             [:div.element-set-actions-button {:on-click handle-select}
              i/pointer-inner])]
 
-           ;; Rendering a plain color/opacity
+          ;; Rendering a background image
+          (:image color)
+          [:*
+           [:div.color-info
+            [:div.color-name (tr "todo.image")]]
+           (when (not disable-opacity)
+             [:div.input-element
+              {:class (dom/classnames :percentail (not= (:opacity color) :multiple))}
+              [:> numeric-input* {:value (-> color :opacity opacity->string)
+                                  :placeholder (tr "settings.multiple")
+                                  :select-on-focus select-on-focus
+                                  :on-focus on-focus
+                                  :on-blur on-blur
+                                  :on-change handle-opacity-change
+                                  :min 0
+                                  :max 100}]])
+           (when select-only
+             [:div.element-set-actions-button {:on-click handle-select}
+              i/pointer-inner])]
+
+         ;; Rendering a plain color/opacity
          :else
          [:*
           [:div.color-info

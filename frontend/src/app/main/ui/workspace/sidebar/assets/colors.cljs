@@ -504,6 +504,8 @@
            (st/emit! (dw/set-assets-section-open file-id :colors true)
                      (ptk/event ::ev/event {::ev/name "add-asset-to-library"
                                             :asset-type "color"}))
+           
+           ;; TODO: asociar nombre de la imagen subida
            ;; FIXME: replace interop with dom helpers
            (modal/show! :colorpicker
                         {:x (.-clientX event)

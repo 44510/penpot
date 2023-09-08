@@ -105,9 +105,11 @@
         (mf/use-fn
          (mf/deps grid)
          (fn [color]
-           (-> grid
-               (update :params assoc :color color)
-               (on-change))))
+           (let [color (dissoc color :id :file-id)]
+             (let [color (dissoc color :id :file-id)]
+               (-> grid
+                   (update :params assoc :color color)
+                   (on-change))))))
 
         handle-detach-color
         (mf/use-fn
@@ -189,6 +191,7 @@
             [:& color-row {:color (:color params)
                            :title (tr "workspace.options.grid.params.color")
                            :disable-gradient true
+                           :disable-image true
                            :on-change handle-change-color
                            :on-detach handle-detach-color}]
             [:button {:class (stl/css :show-more-options)
@@ -228,6 +231,7 @@
              [:& color-row {:color (:color params)
                             :title (tr "workspace.options.grid.params.color")
                             :disable-gradient true
+                            :disable-image true
                             :on-change handle-change-color
                             :on-detach handle-detach-color}]]]
 
@@ -384,6 +388,7 @@
         [:& color-row {:color (:color params)
                        :title (tr "workspace.options.grid.params.color")
                        :disable-gradient true
+                       :disable-image true
                        :on-change handle-change-color
                        :on-detach handle-detach-color}]
         [:div.row-flex

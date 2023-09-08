@@ -36,19 +36,19 @@
         height     (dm/get-prop selrect :height)
 
         has-image? (or (some? metadata)
-                        (some? image))
+                       (some? image))
 
         uri         (cond
                       (some? metadata)
                       (cfg/resolve-file-media metadata)
 
                       (some? image)
-                          (cfg/resolve-file-media image))
+                      (cfg/resolve-file-media image))
 
         embed       (embed/use-data-uris [uri])
         transform   (gsh/transform-str shape)
 
-        ;; When tru e the image has not loaded yet
+        ;; When true the image has not loaded yet
         loading?    (and (some? uri)
                          (not (contains? embed uri)))
 
@@ -80,6 +80,7 @@
        (let [fill-id (dm/str "fill-" shape-index "-" render-id)]
          [:> :pattern (-> (obj/clone pat-props)
                           (obj/set! "id" fill-id)
+                          ;; TODO: check this
                           (cond-> has-image?
                             (-> (obj/set! "width" (* width no-repeat-padding))
                                 (obj/set! "height" (* height no-repeat-padding)))))
@@ -90,7 +91,15 @@
                               :width width
                               :height height
                               :style style}]
-               [:> :rect props]))
+               (if (:fill-image value)
+                 (let [uri (cfg/resolve-file-media (:fill-image value))]
+                   [:image {:href (get embed uri uri)
+                            :preserveAspectRatio "xMidYMid meet"
+                            :width width
+                            :height height
+                            :key (dm/str fill-index)
+                            :opacity (:fill-opacity value)}])
+                 [:> :rect props])))
 
            (when ^boolean has-image?
              [:g
@@ -121,5 +130,6 @@
               (or (= type :image)
                   (= type :text))
               (> (count fills) 1)
-              (some :fill-color-gradient fills))
+              (some :fill-color-gradient fills)
+              (some :fill-image fills))
       [:> fills* props])))

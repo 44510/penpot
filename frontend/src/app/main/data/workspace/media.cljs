@@ -246,6 +246,37 @@
     (process-media-objects params)))
 
 
+
+(defn upload-fill-image
+  [file on-success]
+  (dm/assert!
+    "expected a valid blob for `file` param"
+    (dmm/blob? file))
+  (ptk/reify ::upload-fill-image
+    ptk/WatchEvent
+    (watch [_ state _]
+      (let [on-upload-success 
+            (fn [image]
+              (on-success image)
+              (dmm/notify-finished-loading))
+            
+            on-error   #(do (dmm/notify-finished-loading)
+                          (dmm/process-error %))
+            prepare
+            (fn [content]
+              {:file-id (get-in state [:workspace-file :id])
+               :name "TODO"
+               :is-local false
+               :content content})]
+
+        (dmm/notify-start-loading)
+        (->> (rx/of file)
+             (rx/map dmm/validate-file)
+             (rx/map prepare)
+             (rx/mapcat #(rp/cmd! :upload-file-media-object %))
+             (rx/do on-upload-success)
+             (rx/catch on-error))))))
+
 ;; --- Upload File Media objects
 
 (defn load-and-parse-svg
