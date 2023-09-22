@@ -12,6 +12,7 @@
    [app.common.data :as d]
    [app.common.geom.shapes :as gsh]
    [app.common.svg :as csvg]
+   [app.config :as cf]
    [app.main.ui.context :as muc]
    [app.util.json :as json]
    [app.util.object :as obj]
@@ -286,32 +287,44 @@
     (mf/html
      [:> "penpot:fills" #js {}
       (for [[index fill] (d/enumerate fills)]
-        [:> "penpot:fill"
-         #js {:penpot:fill-color          (if (some? (:fill-color-gradient fill))
-                                              (str/format "url(#%s)" (str "fill-color-gradient_" (mf/use-ctx muc/render-id) "_" index))
+        (let [fill-image-id (get-in fill [:fill-image :id])]
+          [:> "penpot:fill"
+           #js {:penpot:fill-color          (cond
+                                              (some? (:fill-color-gradient fill))
+                                              ;; TODO review this fill color gradient
+                                              (str/format "url(#%s)" (str "fill-color-gradient-" (mf/use-ctx muc/render-id) "-" index))
+
+                                              :else
                                               (d/name (:fill-color fill)))
-              :penpot:fill-color-ref-file (d/name (:fill-color-ref-file fill))
-              :penpot:fill-color-ref-id   (d/name (:fill-color-ref-id fill))
-              :penpot:fill-opacity        (d/name (:fill-opacity fill))}])])))
+                :penpot:fill-image-id       fill-image-id
+                :penpot:fill-image-href     (when fill-image-id (cf/resolve-file-media {:id fill-image-id}))
+                :penpot:fill-color-ref-file (d/name (:fill-color-ref-file fill))
+                :penpot:fill-color-ref-id   (d/name (:fill-color-ref-id fill))
+                :penpot:fill-opacity        (d/name (:fill-opacity fill))}]))])))
 
 (defn- export-strokes-data [{:keys [strokes]}]
   (when-let [strokes (seq strokes)]
     (mf/html
      [:> "penpot:strokes" #js {}
       (for [[index stroke] (d/enumerate strokes)]
-        [:> "penpot:stroke"
-         #js {:penpot:stroke-color          (if (some? (:stroke-color-gradient stroke))
-                                              (str/format "url(#%s)" (str "stroke-color-gradient_" (mf/use-ctx muc/render-id) "_" index))
-                                              (d/name (:stroke-color stroke)))
-              :penpot:stroke-color-ref-file (d/name (:stroke-color-ref-file stroke))
-              :penpot:stroke-color-ref-id   (d/name (:stroke-color-ref-id stroke))
-              :penpot:stroke-opacity        (d/name (:stroke-opacity stroke))
-              :penpot:stroke-style          (d/name (:stroke-style stroke))
-              :penpot:stroke-width          (d/name (:stroke-width stroke))
-              :penpot:stroke-alignment      (d/name (:stroke-alignment stroke))
-              :penpot:stroke-cap-start      (d/name (:stroke-cap-start stroke))
-              :penpot:stroke-cap-end        (d/name (:stroke-cap-end stroke))}])])))
+        (let [stroke-image-id (get-in stroke [:stroke-image :id])]
+          [:> "penpot:stroke"
+           #js {:penpot:stroke-color          (cond
+                                                (some? (:stroke-color-gradient stroke))
+                                                (str/format "url(#%s)" (str "stroke-color-gradient-" (mf/use-ctx muc/render-id) "-" index))
 
+                                                :else
+                                                (d/name (:stroke-color stroke)))
+                :penpot:stroke-image-id       stroke-image-id
+                :penpot:stroke-image-href     (when stroke-image-id (cf/resolve-file-media {:id stroke-image-id}))
+                :penpot:stroke-color-ref-file (d/name (:stroke-color-ref-file stroke))
+                :penpot:stroke-color-ref-id   (d/name (:stroke-color-ref-id stroke))
+                :penpot:stroke-opacity        (d/name (:stroke-opacity stroke))
+                :penpot:stroke-style          (d/name (:stroke-style stroke))
+                :penpot:stroke-width          (d/name (:stroke-width stroke))
+                :penpot:stroke-alignment      (d/name (:stroke-alignment stroke))
+                :penpot:stroke-cap-start      (d/name (:stroke-cap-start stroke))
+                :penpot:stroke-cap-end        (d/name (:stroke-cap-end stroke))}]))])))
 
 (defn- export-interactions-data [{:keys [interactions]}]
   (when-let [interactions (seq interactions)]

@@ -68,7 +68,7 @@
        (for [[fill-index value] (reverse (d/enumerate fills))]
          (when (some? (:fill-color-gradient value))
            (let [gradient  (:fill-color-gradient value)
-                 props #js {:id (dm/str "fill-color-gradient_" render-id "_" fill-index)
+                 props #js {:id (dm/str "fill-color-gradient-" render-id "-" fill-index)
                             :key (dm/str fill-index)
                             :gradient gradient
                             :shape shape}]
@@ -93,7 +93,8 @@
                               :style style}]
                (if (:fill-image value)
                  (let [uri (cfg/resolve-file-media (:fill-image value))]
-                   [:image {:href (get embed uri uri)
+                   [:image {:id (dm/str "fill-image-" fill-index "-" render-id)
+                            :href (get embed uri uri)
                             :preserveAspectRatio "xMidYMid meet"
                             :width width
                             :height height

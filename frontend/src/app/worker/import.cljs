@@ -259,6 +259,7 @@
   [context file node]
   (let [type         (cip/get-type node)
         close?       (cip/close? node)]
+    ;; (println "process-import-node" node)
     (if close?
       (case type
         :frame    (fb/close-artboard file)
@@ -317,36 +318,65 @@
 
 (defn resolve-media
   [context file-id node]
-  (if (and (not (cip/close? node))
-           (cip/has-image? node))
-    (let [name     (cip/get-image-name node)
-          image-data (cip/get-image-data node)
-          image-fill (cip/get-image-fill node)]
-      (->> (upload-media-files context file-id name image-data)
-           (rx/catch #(do (.error js/console "Error uploading media: " name)
-                          (rx/of node)))
-           (rx/map
-            (fn [media]
-              (-> node
-                  (assoc-in [:attrs :penpot:media-id]     (:id media))
-                  (assoc-in [:attrs :penpot:media-width]  (:width media))
-                  (assoc-in [:attrs :penpot:media-height] (:height media))
-                  (assoc-in [:attrs :penpot:media-mtype]  (:mtype media))
+  (if (or (and (not (cip/close? node))
+            (cip/has-image? node))
+        (cip/has-stroke-images? node)
+        (cip/has-fill-images? node))
+    (let [name               (cip/get-image-name node)
+          image-data         (cip/get-image-data node)
+          image-fill         (cip/get-image-fill node)
+          fill-images-data   (->> (cip/get-fill-images-data node)
+                                  (mapv #(assoc % :type :fill)))
+          stroke-images-data (->> (cip/get-stroke-images-data node)
+                                  (mapv #(assoc % :type :stroke)))
+          images-data        (concat
+                               fill-images-data
+                               stroke-images-data
+                               (when image-data
+                                 [{:href image-data}]))]
 
-                  (assoc-in [:attrs :penpot:fill-color]  (:fill image-fill))
-                  (assoc-in [:attrs :penpot:fill-color-ref-file]  (:fill-color-ref-file image-fill))
-                  (assoc-in [:attrs :penpot:fill-color-ref-id]  (:fill-color-ref-id image-fill))
-                  (assoc-in [:attrs :penpot:fill-opacity]  (:fill-opacity image-fill))
-                  (assoc-in [:attrs :penpot:fill-color-gradient]  (:fill-color-gradient image-fill)))))))
+      (->> (rx/from images-data)
+           (rx/mapcat (fn [image-data]
+                        (->> (upload-media-files context file-id name (:href image-data))
+                             (rx/catch #(do (.error js/console "Error uploading media: " name)
+                                          (rx/of node)))
+                             (rx/map #(vector (:id image-data) % (:type image-data))))))
+           (rx/reduce (fn [acc [id data type]] (assoc acc id (assoc data :type type))) {})
+           (rx/map
+             (fn [images]
+               (let [fill-images (into {} (filter #(-> % (val) (:type) (= :fill)) images))
+                     stroke-images (into {} (filter #(-> % (val) (:type) (= :stroke)) images))
+                     media (->
+                            (filter #(-> % (val) (:type) nil?) images)
+                            first
+                            val)]
+
+                 (-> node
+                     (assoc :fill-images fill-images)
+                     (assoc :stroke-images stroke-images)
+                     (cond-> image-data
+                       (->
+                        (assoc-in [:attrs :penpot:media-id]     (:id media))
+                        (assoc-in [:attrs :penpot:media-width]  (:width media))
+                        (assoc-in [:attrs :penpot:media-height] (:height media))
+                        (assoc-in [:attrs :penpot:media-mtype]  (:mtype media))
+
+                        (assoc-in [:attrs :penpot:fill-color]           (:fill image-fill))
+                        (assoc-in [:attrs :penpot:fill-color-ref-file]  (:fill-color-ref-file image-fill))
+                        (assoc-in [:attrs :penpot:fill-color-ref-id]    (:fill-color-ref-id image-fill))
+                        (assoc-in [:attrs :penpot:fill-opacity]         (:fill-opacity image-fill))
+                        (assoc-in [:attrs :penpot:fill-color-gradient]  (:fill-color-gradient image-fill))))))))))
 
     ;; If the node is not an image just return the node
     (->> (rx/of node)
          (rx/observe-on :async))))
 
 (defn media-node? [node]
-  (and (cip/shape? node)
-       (cip/has-image? node)
-       (not (cip/close? node))))
+  (or (and (cip/shape? node)
+        (cip/has-image? node)
+        (not (cip/close? node)))
+    (cip/has-stroke-images? node)
+    (cip/has-fill-images? node)))
 
 (defn import-page
   [context file [page-id page-name content]]
@@ -379,7 +409,9 @@
              (rx/mapcat
               (fn [node]
                 (->> (resolve-media context file-id node)
-                     (rx/map (fn [result] [node result])))))
+                     (rx/map (fn [result]
+                               (js/console.log "pre-process-images" (clj->js result))
+                               [node result])))))
              (rx/reduce conj {}))]
 
     (->> pre-process-images
