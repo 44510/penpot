@@ -615,7 +615,7 @@
 
     ptk/WatchEvent
     (watch [_ _ _]
-      (->> (rp/cmd! :get-file-object-thumbnails {:file-id library-id})
+      (->> (rp/cmd! :get-file-object-thumbnails {:file-id library-id :tag "component"})
            (rx/map (fn [thumbnails]
                      (fn [state]
                        (assoc-in state [:workspace-libraries library-id :thumbnails] thumbnails))))))))
@@ -1136,7 +1136,7 @@
               (rx/map (fn [file]
                         (fn [state]
                           (assoc-in state [:workspace-libraries library-id] file)))))
-         (->> (rp/cmd! :get-file-object-thumbnails {:file-id library-id})
+         (->> (rp/cmd! :get-file-object-thumbnails {:file-id library-id :tag "component"})
               (rx/map (fn [thumbnails]
                         (fn [state]
                           (assoc-in state [:workspace-libraries library-id :thumbnails] thumbnails))))))))))

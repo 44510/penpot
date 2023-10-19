@@ -152,7 +152,7 @@
 (defn update-thumbnail
   "Updates the thumbnail information for the given `id`"
 
-  [file-id page-id frame-id]
+  [file-id page-id frame-id tag]
   (let [object-id (fmt-object-id file-id page-id frame-id)]
     (ptk/reify ::update-thumbnail
       cljs.core/IDeref
@@ -160,7 +160,7 @@
 
       ptk/WatchEvent
       (watch [_ state stream]
-        (l/dbg :hint "update thumbnail" :object-id object-id)
+        (l/dbg :hint "update thumbnail" :object-id object-id :tag tag)
         ;; Send the update to the back-end
         (->> (get-thumbnail state file-id page-id frame-id {:object-id object-id})
              (rx/mapcat (fn [uri]
@@ -172,7 +172,8 @@
                                              ;; Send the data to backend
                                              (let [params {:file-id file-id
                                                            :object-id object-id
-                                                           :media blob}]
+                                                           :media blob
+                                                           :tag (or tag "frame")}]
                                                (rp/cmd! :create-file-object-thumbnail params))))
                                 (rx/catch rx/empty)
                                 (rx/ignore)))))

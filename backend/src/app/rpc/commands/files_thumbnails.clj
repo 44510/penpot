@@ -38,10 +38,23 @@
 
 ;; --- COMMAND QUERY: get-file-object-thumbnails
 
+(defn- get-object-thumbnails-by-tag
+  [conn file-id tag]
+  (let [sql (str/concat
+             "select object_id, data, media_id, tag "
+             "  from file_object_thumbnail"
+             " where file_id=? and tag=?")
+        res (db/exec! conn [sql file-id tag])]
+    (->> res
+         (d/index-by :object-id (fn [row]
+                                  (or (some-> row :media-id files/resolve-public-uri)
+                                      (:data row))))
+         (d/without-nils))))
+
 (defn- get-object-thumbnails
   ([conn file-id]
    (let [sql (str/concat
-              "select object_id, data, media_id "
+              "select object_id, data, media_id, tag "
               "  from file_object_thumbnail"
               " where file_id=?")
          res (db/exec! conn [sql file-id])]
@@ -53,9 +66,9 @@
 
   ([conn file-id object-ids]
    (let [sql (str/concat
-              "select object_id, data, media_id "
+              "select object_id, data, media_id, tag "
               "  from file_object_thumbnail"
-              " where file_id=? and object_id = ANY(?)")
+              " where file_id=? and object_id = ANY(?) and tag = 'frame'")
          ids (db/create-array conn "text" (seq object-ids))
          res (db/exec! conn [sql file-id ids])]
      (d/index-by :object-id
@@ -69,15 +82,18 @@
   {::doc/added "1.17"
    ::doc/module :files
    ::sm/params [:map {:title "get-file-object-thumbnails"}
-                [:file-id ::sm/uuid]]
+                [:file-id ::sm/uuid]
+                [:tag {:optional true} :string]]
    ::sm/result [:map-of :string :string]
    ::cond/get-object #(files/get-minimal-file %1 (:file-id %2))
    ::cond/reuse-key? true
    ::cond/key-fn files/get-file-etag}
-  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id file-id] :as params}]
+  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id file-id tag] :as params}]
   (dm/with-open [conn (db/open pool)]
     (files/check-read-permissions! conn profile-id file-id)
-    (get-object-thumbnails conn file-id)))
+    (if tag
+      (get-object-thumbnails-by-tag conn file-id tag)
+      (get-object-thumbnails conn file-id))))
 
 ;; --- COMMAND QUERY: get-file-thumbnail
 
@@ -290,13 +306,13 @@
 ;; --- MUTATION COMMAND: create-file-object-thumbnail
 
 (def ^:private sql:create-object-thumbnail
-  "insert into file_object_thumbnail(file_id, object_id, media_id)
-   values (?, ?, ?)
-       on conflict(file_id, object_id) do
+  "insert into file_object_thumbnail(file_id, object_id, media_id, tag)
+   values (?, ?, ?, ?)
+       on conflict(file_id, tag, object_id) do
           update set media_id = ?;")
 
 (defn- create-file-object-thumbnail!
-  [{:keys [::db/conn ::sto/storage]} file-id object-id media]
+  [{:keys [::db/conn ::sto/storage]} file-id object-id media tag]
 
   (let [path  (:path media)
         mtype (:mtype media)
@@ -310,14 +326,15 @@
                                 :bucket "file-object-thumbnail"})]
 
     (db/exec-one! conn [sql:create-object-thumbnail file-id object-id
-                        (:id media) (:id media)])))
+                        (:id media) tag (:id media)])))
 
 
 (def schema:create-file-object-thumbnail
   [:map {:title "create-file-object-thumbnail"}
    [:file-id ::sm/uuid]
    [:object-id :string]
-   [:media ::media/upload]])
+   [:media ::media/upload]
+   [:tag {:optional true} :string]])
 
 (sv/defmethod ::create-file-object-thumbnail
   {:doc/added "1.19"
@@ -325,7 +342,7 @@
    ::audit/skip true
    ::sm/params schema:create-file-object-thumbnail}
 
-  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id file-id object-id media]}]
+  [{:keys [::db/pool] :as cfg} {:keys [::rpc/profile-id file-id object-id media tag]}]
   (db/with-atomic [conn pool]
     (files/check-edition-permissions! conn profile-id file-id)
     (media/validate-media-type! media)
@@ -335,7 +352,7 @@
       (-> cfg
           (update ::sto/storage media/configure-assets-storage)
           (assoc ::db/conn conn)
-          (create-file-object-thumbnail! file-id object-id media))
+          (create-file-object-thumbnail! file-id object-id media (or tag "frame")))
       nil)))
 
 ;; --- MUTATION COMMAND: delete-file-object-thumbnail
