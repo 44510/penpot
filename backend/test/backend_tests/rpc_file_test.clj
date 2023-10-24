@@ -668,6 +668,7 @@
                   ::rpc/profile-id (:id prof)
                   :file-id (:id file)
                   :object-id (str page-id frame1-id)
+                  :tag "test"
                   :data "random-data-1"}
 
             {:keys [error result] :as out} (th/command! data)]

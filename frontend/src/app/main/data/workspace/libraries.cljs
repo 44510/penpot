@@ -450,7 +450,7 @@
                 page-id   (:main-instance-page component)
                 root-id   (:main-instance-id component)]
             (rx/of
-             (dwt/clear-thumbnail (:current-file-id state) page-id root-id)
+             (dwt/clear-thumbnail (:current-file-id state) page-id root-id "component")
              (dwsh/delete-shapes page-id #{root-id}))) ;; Deleting main root triggers component delete
           (let [changes (-> (pcb/empty-changes it)
                             (pcb/with-library-data data)
@@ -775,7 +775,7 @@
             component       (ctkl/get-component data component-id)
             page-id         (:main-instance-page component)
             root-id         (:main-instance-id component)]
-           (rx/of (dwt/request-thumbnail file-id page-id root-id))))))
+           (rx/of (dwt/request-thumbnail file-id page-id root-id "component"))))))
 
 (defn- find-shape-index
   [objects id shape-id]

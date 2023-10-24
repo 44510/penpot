@@ -110,7 +110,7 @@
             height         (dm/get-prop bounds :height)
 
             thumbnail-uri* (mf/with-memo [file-id page-id frame-id]
-                             (let [object-id (dwt/fmt-object-id file-id page-id frame-id)]
+                             (let [object-id (dwt/fmt-object-id file-id page-id frame-id "frame")]
                                (refs/workspace-thumbnail-by-id object-id)))
             thumbnail-uri (mf/deref thumbnail-uri*)
 
@@ -125,7 +125,7 @@
         (mf/with-effect []
           (when-not (some? thumbnail-uri)
             (tm/schedule-on-idle
-             #(st/emit! (dwt/request-thumbnail file-id page-id frame-id)))))
+             #(st/emit! (dwt/request-thumbnail file-id page-id frame-id "frame")))))
 
         (fdm/use-dynamic-modifiers objects (mf/ref-val content-ref) modifiers)
 

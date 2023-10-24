@@ -272,7 +272,7 @@
   [file-id component]
   (let [page-id   (:main-instance-page component)
         root-id   (:main-instance-id component)
-        object-id (dwt/fmt-object-id file-id page-id root-id)]
+        object-id (dwt/fmt-object-id file-id page-id root-id "component")]
     (if (= file-id (:id @refs/workspace-file))
       (mf/deref (refs/workspace-thumbnail-by-id object-id))
       (let [thumbnails (dm/get-in @refs/workspace-libraries [file-id :thumbnails (dm/str object-id)])]

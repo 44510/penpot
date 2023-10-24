@@ -270,9 +270,9 @@
 ;; --- MUTATION COMMAND: upsert-file-object-thumbnail
 
 (def sql:upsert-object-thumbnail
-  "insert into file_object_thumbnail(file_id, object_id, data)
-   values (?, ?, ?)
-       on conflict(file_id, object_id) do
+  "insert into file_object_thumbnail(file_id, tag, object_id, data)
+   values (?, 'thumbnail', ?, ?)
+       on conflict(file_id, tag, object_id) do
           update set data = ?;")
 
 (defn upsert-file-object-thumbnail!
