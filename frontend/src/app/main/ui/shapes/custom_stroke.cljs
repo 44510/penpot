@@ -238,7 +238,12 @@
              stroke-margin (+ stroke-width margin)
 
              w             (+ (dm/get-prop selrect :width) (* 2 stroke-margin))
-             h             (+ (dm/get-prop selrect :height) (* 2 stroke-margin))]
+             h             (+ (dm/get-prop selrect :height) (* 2 stroke-margin))
+             image-props   #js {:href (get embed uri uri)
+                                :preserveAspectRatio "xMidYMid slice"
+                                :width 1
+                                :height 1
+                                :id (dm/str "stroke-image-" render-id "-" index)}]
          
          ;; We need to make the pattern size and the image fit so it's not repeated
          [:pattern {:id (dm/str "stroke-fill-" render-id "-" index)
@@ -249,10 +254,7 @@
                     :height (/ h (dm/get-prop selrect :height))
                     :viewBox "0 0 1 1"
                     :preserveAspectRatio "xMidYMid slice"}
-          [:image {:href (get embed uri uri)
-                   :preserveAspectRatio "xMidYMid slice"
-                   :width 1
-                   :height 1}]]))
+          [:> :image image-props]]))
 
      (cond
        (and (not open-path?)

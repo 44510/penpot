@@ -442,29 +442,29 @@
     (cond-> props
       :always
       (assoc :fill-color nil
-        :fill-opacity nil)
+             :fill-opacity nil)
 
       (some? meta-fill-color)
       (assoc :fill-color meta-fill-color
-        :fill-opacity (d/parse-double meta-fill-opacity))
+             :fill-opacity (d/parse-double meta-fill-opacity))
 
       (some? meta-fill-color-gradient)
       (assoc :fill-color-gradient meta-fill-color-gradient
-        :fill-color nil
-        :fill-opacity nil)
+             :fill-color nil
+             :fill-opacity nil)
 
       (some? gradient)
       (assoc :fill-color-gradient gradient
-        :fill-color nil
-        :fill-opacity nil)
+             :fill-color nil
+             :fill-opacity nil)
 
       (uc/hex? fill)
       (assoc :fill-color fill
-        :fill-opacity (-> svg-data (:fill-opacity "1") d/parse-double))
+             :fill-opacity (-> svg-data (:fill-opacity "1") d/parse-double))
 
       (some? fill-color-ref-id)
       (assoc :fill-color-ref-id fill-color-ref-id
-        :fill-color-ref-file fill-color-ref-file))))
+             :fill-color-ref-file fill-color-ref-file))))
 
 (defn add-stroke
   [props node svg-data]
@@ -734,9 +734,11 @@
   [node svg-data]
   (let [fills-node (get-data node :penpot:fills)
         fill-images (:fill-images node)
+        ;; _ (println "fill-images" fill-images)
         fills (->> (find-all-nodes fills-node :penpot:fill)
                    (mapv (fn [fill-node]
                            (let [fill-image-id (get-meta fill-node :fill-image-id)]
+                            ;;  (println "fill-image-id" fill-image-id)
                              {:fill-color  (when (not (str/starts-with? (get-meta fill-node :fill-color) "url"))
                                              (get-meta fill-node :fill-color))
                               :fill-color-gradient (when (str/starts-with? (get-meta fill-node :fill-color) "url(#fill-color-gradient")
@@ -827,9 +829,10 @@
             (find-node :penpot:strokes))]
     (->> (find-all-nodes strokes :penpot:stroke)
          (mapv (fn [stroke-node]
-                 ;; TODO: quitar los nulos?
-                 {:id (get-in stroke-node [:attrs :penpot:stroke-image-id])
-                  :href (get-in stroke-node [:attrs :penpot:stroke-image-href])}))
+                 (let [id (get-in stroke-node [:attrs :penpot:stroke-image-id])
+                       image-node (->> node (node-seq) (find-node-by-id id))]
+                   {:id id
+                    :href (get-in image-node [:attrs :href])})))
          (filterv #(some? (:id %))))))
 
 (defn has-stroke-images?
@@ -847,7 +850,7 @@
             (find-node :g)
             (find-node :g)
             (find-node :image))]
-    
+        
     (or (= type :image)
       (some? pattern-image))))
 
@@ -866,7 +869,7 @@
             (find-node :image)
             :attrs)
         image-data (get-svg-data :image node)
-        svg-data (or image-data pattern-data)]
+        svg-data (or pattern-data image-data)]
     (or (:href svg-data) (:xlink:href svg-data))))
 
 (defn get-fill-images-data
@@ -877,9 +880,10 @@
             (find-node :penpot:fills))]
     (->> (find-all-nodes fills :penpot:fill)
          (mapv (fn [fill-node]
-                   ;; TODO: quitar los nulos?
-                 {:id (get-in fill-node [:attrs :penpot:fill-image-id])
-                  :href (get-in fill-node [:attrs :penpot:fill-image-href])}))
+                 (let [id (get-in fill-node [:attrs :penpot:fill-image-id])
+                       image-node (->> node (node-seq) (find-node-by-id id))]
+                   {:id id
+                    :href (get-in image-node [:attrs :href])})))
          (filterv #(some? (:id %))))))
 
 (defn has-fill-images?

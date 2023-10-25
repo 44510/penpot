@@ -36,7 +36,7 @@
         height     (dm/get-prop selrect :height)
 
         has-image? (or (some? metadata)
-                       (some? image))
+                     (some? image))
 
         uri         (cond
                       (some? metadata)
@@ -45,12 +45,16 @@
                       (some? image)
                       (cfg/resolve-file-media image))
 
-        embed       (embed/use-data-uris [uri])
+
+        uris (->>
+              (into [uri] (mapv #(when (:fill-image %) (cfg/resolve-file-media (:fill-image %))) fills))
+              (filter some?))
+
+        embed       (embed/use-data-uris uris)
         transform   (gsh/transform-str shape)
 
         ;; When true the image has not loaded yet
-        loading?    (and (some? uri)
-                         (not (contains? embed uri)))
+        loading?    (not-any? #(contains? embed %) uris)
 
         pat-props   #js {:patternUnits "userSpaceOnUse"
                          :x x
@@ -60,8 +64,8 @@
                          :data-loading loading?}
 
         pat-props   (if (= :path type)
-                     (obj/set! pat-props "patternTransform" transform)
-                     pat-props)]
+                      (obj/set! pat-props "patternTransform" transform)
+                      pat-props)]
 
     (for [[shape-index shape] (d/enumerate (or (:position-data shape) [shape]))]
       [:* {:key (dm/str shape-index)}
@@ -92,14 +96,15 @@
                               :height height
                               :style style}]
                (if (:fill-image value)
-                 (let [uri (cfg/resolve-file-media (:fill-image value))]
-                   [:image {:id (dm/str "fill-image-" fill-index "-" render-id)
-                            :href (get embed uri uri)
-                            :preserveAspectRatio "xMidYMid meet"
-                            :width width
-                            :height height
-                            :key (dm/str fill-index)
-                            :opacity (:fill-opacity value)}])
+                 (let [uri (cfg/resolve-file-media (:fill-image value))
+                       image-props #js {:id (dm/str "fill-image-" render-id "-" fill-index)
+                                        :href (get embed uri uri)
+                                        :preserveAspectRatio "xMidYMid meet"
+                                        :width width
+                                        :height height
+                                        :key (dm/str fill-index)
+                                        :opacity (:fill-opacity value)}]
+                   [:> :image image-props])
                  [:> :rect props])))
 
            (when ^boolean has-image?

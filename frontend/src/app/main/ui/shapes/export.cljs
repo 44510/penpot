@@ -10,6 +10,7 @@
   importation."
   (:require
    [app.common.data :as d]
+   [app.common.data.macros :as dm]
    [app.common.geom.shapes :as gsh]
    [app.common.svg :as csvg]
    [app.config :as cf]
@@ -287,7 +288,7 @@
     (mf/html
      [:> "penpot:fills" #js {}
       (for [[index fill] (d/enumerate fills)]
-        (let [fill-image-id (get-in fill [:fill-image :id])]
+        (let [fill-image-id (dm/str "fill-image-" (mf/use-ctx muc/render-id) "-" index)]
           [:> "penpot:fill"
            #js {:penpot:fill-color          (cond
                                               (some? (:fill-color-gradient fill))
@@ -296,8 +297,8 @@
 
                                               :else
                                               (d/name (:fill-color fill)))
-                :penpot:fill-image-id       fill-image-id
-                :penpot:fill-image-href     (when fill-image-id (cf/resolve-file-media {:id fill-image-id}))
+                :penpot:fill-image-id       (when (:fill-image fill) fill-image-id)
+                ;; :penpot:fill-image-href     (when fill-image-id (cf/resolve-file-media {:id fill-image-id}))
                 :penpot:fill-color-ref-file (d/name (:fill-color-ref-file fill))
                 :penpot:fill-color-ref-id   (d/name (:fill-color-ref-id fill))
                 :penpot:fill-opacity        (d/name (:fill-opacity fill))}]))])))
@@ -307,7 +308,7 @@
     (mf/html
      [:> "penpot:strokes" #js {}
       (for [[index stroke] (d/enumerate strokes)]
-        (let [stroke-image-id (get-in stroke [:stroke-image :id])]
+        (let [stroke-image-id (dm/str "stroke-image-" (mf/use-ctx muc/render-id) "-" index)]
           [:> "penpot:stroke"
            #js {:penpot:stroke-color          (cond
                                                 (some? (:stroke-color-gradient stroke))
@@ -315,8 +316,8 @@
 
                                                 :else
                                                 (d/name (:stroke-color stroke)))
-                :penpot:stroke-image-id       stroke-image-id
-                :penpot:stroke-image-href     (when stroke-image-id (cf/resolve-file-media {:id stroke-image-id}))
+                :penpot:stroke-image-id       (when (:stroke-image stroke) stroke-image-id)
+                ;; :penpot:stroke-image-href     (when stroke-image-id (cf/resolve-file-media {:id stroke-image-id}))
                 :penpot:stroke-color-ref-file (d/name (:stroke-color-ref-file stroke))
                 :penpot:stroke-color-ref-id   (d/name (:stroke-color-ref-id stroke))
                 :penpot:stroke-opacity        (d/name (:stroke-opacity stroke))
@@ -474,5 +475,5 @@
      (export-strokes-data          shape)
      (export-grid-data             shape)
      (export-layout-container-data shape)
-     (export-layout-item-data     shape)]))
+     (export-layout-item-data      shape)]))
 

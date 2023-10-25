@@ -323,16 +323,18 @@
         (cip/has-stroke-images? node)
         (cip/has-fill-images? node))
     (let [name               (cip/get-image-name node)
+          has-image          (cip/has-image? node)
           image-data         (cip/get-image-data node)
           image-fill         (cip/get-image-fill node)
           fill-images-data   (->> (cip/get-fill-images-data node)
                                   (mapv #(assoc % :type :fill)))
           stroke-images-data (->> (cip/get-stroke-images-data node)
                                   (mapv #(assoc % :type :stroke)))
+          
           images-data        (concat
                                fill-images-data
                                stroke-images-data
-                               (when image-data
+                               (when has-image
                                  [{:href image-data}]))]
 
       (->> (rx/from images-data)
@@ -346,15 +348,18 @@
              (fn [images]
                (let [fill-images (into {} (filter #(-> % (val) (:type) (= :fill)) images))
                      stroke-images (into {} (filter #(-> % (val) (:type) (= :stroke)) images))
-                     media (->
-                            (filter #(-> % (val) (:type) nil?) images)
-                            first
-                            val)]
 
+                     ;; TODO, quedarse solo con los atributos que quiero: name, id, width, height, mtype
+
+                     media (when has-image
+                             (->
+                              (filter #(-> % (val) (:type) nil?) images)
+                              first
+                              val))]
                  (-> node
                      (assoc :fill-images fill-images)
                      (assoc :stroke-images stroke-images)
-                     (cond-> image-data
+                     (cond-> has-image
                        (->
                         (assoc-in [:attrs :penpot:media-id]     (:id media))
                         (assoc-in [:attrs :penpot:media-width]  (:width media))
