@@ -69,7 +69,7 @@
 
     (for [[shape-index shape] (d/enumerate (or (:position-data shape) [shape]))]
       [:* {:key (dm/str shape-index)}
-       (for [[fill-index value] (reverse (d/enumerate fills))]
+       (for [[fill-index value] (reverse (d/enumerate (get shape :fills [])))]
          (when (some? (:fill-color-gradient value))
            (let [gradient  (:fill-color-gradient value)
                  props #js {:id (dm/str "fill-color-gradient-" render-id "-" fill-index)
@@ -89,7 +89,7 @@
                             (-> (obj/set! "width" (* width no-repeat-padding))
                                 (obj/set! "height" (* height no-repeat-padding)))))
           [:g
-           (for [[fill-index value] (reverse (d/enumerate fills))]
+           (for [[fill-index value] (reverse (d/enumerate (get shape :fills [])))]
              (let [style (attrs/get-fill-style value fill-index render-id type)
                    props #js {:key (dm/str fill-index)
                               :width width

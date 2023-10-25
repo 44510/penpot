@@ -394,15 +394,17 @@
         index           (unchecked-get props "index")
 
         render-id       (mf/use-ctx muc/render-id)
+        render-id       (d/nilv (unchecked-get props "render-id") render-id)
+        _ (println "shape-custom-stroke" render-id)
 
         stroke-width    (:stroke-width stroke 0)
         stroke-style    (:stroke-style stroke :none)
         stroke-position (:stroke-alignment stroke :center)
 
         has-stroke?     (and (> stroke-width 0)
-                             (not= stroke-style :none))
+                          (not= stroke-style :none))
         closed?         (or (not ^boolean (cph/path-shape? shape))
-                            (not ^boolean (gsh/open-path? shape)))
+                          (not ^boolean (gsh/open-path? shape)))
         inner?          (= :inner stroke-position)
         outer?          (= :outer stroke-position)]
 

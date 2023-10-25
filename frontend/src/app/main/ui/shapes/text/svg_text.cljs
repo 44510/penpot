@@ -99,6 +99,6 @@
                           (obj/merge! browser-props)))
               shape (assoc shape :fills (:fills data))]
 
-          [:& (mf/provider muc/render-id) {:key index :value (str render-id "-" (:id shape) "-" index)}
+          [:& (mf/provider muc/render-id) {:key index :value render-id}
            [:& shape-custom-strokes {:shape shape :position index :render-id render-id}
             [:> :text props (:text data)]]]))]]))
